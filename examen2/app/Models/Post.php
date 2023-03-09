@@ -11,5 +11,8 @@ class Post extends Model
     protected $table = 'post';
     
     public $fillable = ['mensaje', 'idusuario'];
-    public $timestamps = false;
+    
+     public function usuario(){
+        return $this->belongTo('App\Models\Usuario', 'idusuario');
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Usuario;
 use Illuminate\Http\Request;
+use App\Http\Requests\UserLoginRequest;
 
 class UsuarioController extends Controller
 {
@@ -14,10 +15,7 @@ class UsuarioController extends Controller
      */
     public function index()
     {
-         $usuario = Usuario::all();
-         
-            return view('usuario.index', ['activeUsuario' => 'active',
-                                           'usuario' => $usuario]);
+        //
     }
 
     /**
@@ -27,10 +25,7 @@ class UsuarioController extends Controller
      */
     public function create()
     {
-        return view('usuario.create', ['activeUsuario' => 'active',
-                                        'subTitle' => 'Usuario - Create',
-                                        'table' =>'usuario']);
-        
+        //
     }
 
     /**
@@ -39,11 +34,18 @@ class UsuarioController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(UserLoginRequest $request)
     {
-        $usuario=new Usuario($request->all());
-        $usuario->save();
-            return redirect('usuario');
+        try{
+        $user = new Usuario($request->only('nombre', 'correo', 'fecha'));
+        $user->save();
+        return redirect('/')->with('message', 'You have registered.');
+        }catch(\Exeption $e){
+            return back() -> withInput()->withErrors(['default' => 'Message ...']);
+        }
+        
+        
+        
     }
 
     /**
@@ -54,9 +56,7 @@ class UsuarioController extends Controller
      */
     public function show(Usuario $usuario)
     {
-        return view('usuario.show', ['activeUsuario' => 'active',
-                                        'usuario' => $usuario,
-                                        'subTitle' => 'Usuario - Show']);
+        //
     }
 
     /**
@@ -67,9 +67,7 @@ class UsuarioController extends Controller
      */
     public function edit(Usuario $usuario)
     {
-        return view('usuario.edit', ['activeUsuario' => 'active',
-                                        'usuario' => $cancion,
-                                        'subTitle' => 'Usuario - Edit']);
+        //
     }
 
     /**
@@ -81,8 +79,7 @@ class UsuarioController extends Controller
      */
     public function update(Request $request, Usuario $usuario)
     {
-         $usuario->update($request->all());
-            return redirect('/usuario');
+        //
     }
 
     /**
@@ -93,21 +90,6 @@ class UsuarioController extends Controller
      */
     public function destroy(Usuario $usuario)
     {
-        $usuario->delete();
-            return redirect('/usuario');
+        //
     }
-    protected function validateLogin(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'email' => 'required|exists:usuario',
-    ]);
-
-    if ($validator->fails()) {
-        flash('Email no existe en la base de datos')->error();
-        
-        // or 
-
-        $request->session()->flash('message', 'Email Does Not Exists');
-    }
-}
 }

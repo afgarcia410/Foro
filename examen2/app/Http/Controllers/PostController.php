@@ -3,10 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use App\Models\Usuario;
+use App\Models\Comment;
 use Illuminate\Http\Request;
+use App\Http\Requests\PostCreateRequest;
+use App\Http\Requests\PostEditRequest;
+use Carbon\Carbon;
 
 class PostController extends Controller
 {
+    function __construct() {
+        $this-> middleware('logged');        
+    }
     /**
      * Display a listing of the resource.
      *
@@ -14,8 +22,18 @@ class PostController extends Controller
      */
     public function index()
     {
-        $post = Post::all();
-            return view('Post.index', ['post' => $post]);
+        $posts = Post::all();
+        $email = session()->get('email');
+        $user = Usuario::where('correo', $email)->get();
+        $mytime = Carbon::now()->subMinute(5);
+        $mytime = $mytime->toDateTimeString();
+        
+        return view('post.index',['activePost' => 'active',
+                                    'posts'    => $posts,
+                                    'user'     => $user[0],
+                                    'now'      => $mytime,
+                                    'table'    => 'Post']);
+                                   
     }
 
     /**
@@ -25,9 +43,8 @@ class PostController extends Controller
      */
     public function create()
     {
-        return view('Post.create', ['activePost' => 'active',
-                                    'subTitle' => 'Post - Create',
-                                    'table' => 'Post']);
+        return view('post.create', ['activePost' => 'active',
+                                        'table' =>'Post']);
     }
 
     /**
@@ -36,11 +53,19 @@ class PostController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(PostCreateRequest $request)
     {
-         $post = new post($request->all());
+        $email = session()->get('email');
+        $user = Usuario::where('correo', $email)->get('id');
+        $user =  $user[0]->id;
+        $request['idusuario'] = $user;
+        try{
+        $post = new Post($request->all());
         $post->save();
-        return redirect('post');
+        return redirect('/mypost');
+        }catch(\Exeption $e){
+            return back() -> withInput()->withErrors(['default' => 'Message ...']);
+        }
     }
 
     /**
@@ -49,12 +74,15 @@ class PostController extends Controller
      * @param  \App\Models\Post  $post
      * @return \Illuminate\Http\Response
      */
-    public function show(Post $post)
+    public function show(Post $mypost)
     {
-        return view('Post.show', ['activePost' => 'active',
-                                    'post' => $post,
-                                    'subTitle' => 'post - Show - ' . $post->id,
-                                    'table' => 'post']);
+        $comments = Comment::all();
+        $users = Usuario::all();
+        return view('post.show', ['activePost' => 'active',
+                                        'comments' => $comments,
+                                        'users' => $users,
+                                        'post' => $mypost]);
+                                        
     }
 
     /**
@@ -63,11 +91,10 @@ class PostController extends Controller
      * @param  \App\Models\Post  $post
      * @return \Illuminate\Http\Response
      */
-    public function edit(Post $post)
+    public function edit(Post $mypost)
     {
-        return view('Post.edit', ['activePost' => 'active',
-                                        'post' => $post,
-                                        'subTitle' => 'post - Edit']);
+        return view('post.edit', ['activePost' => 'active',
+                                        'post' => $mypost]);
     }
 
     /**
@@ -77,10 +104,24 @@ class PostController extends Controller
      * @param  \App\Models\Post  $post
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Post $post)
+    public function update(PostEditRequest $request, Post $mypost)
     {
-        $post->update($request->all());
-            return redirect('/post');
+        $mytime = Carbon::now()->subMinute(5);
+        $mytime = $mytime->toDateTimeString();
+        if($mypost->updated_at > $mytime){
+            try {
+                $mypost->update($request->all());
+                $message = 'The post has been updated.';
+            } catch(Exception $e) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['update' => 'An unexpected error occurred while updating.']);
+            }
+            return redirect('mypost')->with('message', $message);
+        }else{
+            return redirect('mypost')->with('message', 'You only have 5 minutes to edit your posts.');
+        }
+        
     }
 
     /**
@@ -89,9 +130,46 @@ class PostController extends Controller
      * @param  \App\Models\Post  $post
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Post $post)
+    public function destroy(Post $mypost)
     {
-        $post->delete();
-            return redirect('/post');
+        /*
+        $mytime = Carbon::now()->subMinute(5);
+        $mytime = $mytime->toDateTimeString();
+        if($mycomment->updated_at > $mytime){
+            try {
+                $mypost->delete();
+                $message = 'The post ' . $mypost->id . ' has been removed.';
+            } catch(\Exception $e) {
+                $message = 'The post ' . $mypost->id . ' has not been removed.';
+            }
+            return redirect('mypost')->with('message', $message);
+        }else{
+             return redirect('mypost')->with('message', 'You only have 5 minutes to delete your posts.');
+        }
+        */
+        try {
+            if(session()->get('usuario')->id != $mypost->usuario->id) {
+                session()->flash('message', 'You cannot access to foreign data');
+            } else if(!$mypost->getMinutes($mypost)) {
+                session()->flash('message', 'Time to delete expired');
+            } else {
+                $mypost->delete();
+            }
+            return redirect('post');
+        } catch(\Exception $e) {
+            return back()->withErrors(
+                ['default' => 'Error when deleting']);
+        }
     }
+    
+    
+    public function allposts()
+    {
+        $posts = Post::all();
+        
+        return view('post.all',['activePosts' => 'active',
+                                    'posts'    => $posts,
+                                    'table'    => 'Post']);
+    }
+    
 }

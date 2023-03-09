@@ -2,10 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\MainController;
 use App\Http\Controllers\UsuarioController;
-use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\AllPostController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -17,11 +20,18 @@ use App\Http\Controllers\CommentController;
 |
 */
 
-Route::get('/', function () {
-    return view('usuario.index');
-});
 
-Route::resource('usuario', UsuarioController::class);
-Route::resource('categoria', CategoriaController::class);
-Route::resource('post', PostController::class);
-Route::resource('comment',CommentController::class);
+Route::get('/', [MainController::class, 'index'])->name('index');
+
+Route::get('user/logout', [LoginController::class, 'logout'])->name('logout')->middleware('logged');
+
+Route::post('login', [LoginController::class, 'login'])->name('login');
+Route::post('signin', [UsuarioController::class, 'store'])->name('signin');
+
+Route::resource('mypost', PostController::class);
+Route::resource('mycomment', CommentController::class);
+
+Route::get('post', [PostController::class, 'allposts'])->name('allposts');;
+
+//Route::resource('post', AllPostController::class);
+
